@@ -56,7 +56,7 @@ def main():
     args = sys.argv[1:]
     Z = 0.6
     TAKEOFF_DURATION = 2.5
-    WAYPOINTS, GOTO_DURATION = create_trajectory_from_file(args[1], Z)
+    WAYPOINTS, GOTO_DURATION = create_trajectory_from_file(args[0], Z)
 
     swarm = Crazyswarm()
     timeHelper = swarm.timeHelper

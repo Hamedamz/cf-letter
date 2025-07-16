@@ -1,7 +1,10 @@
 """Single CF: takeoff, follow absolute-coords waypoints, land."""
 
 import json
+import os
 import sys
+import time
+from datetime import datetime
 
 import numpy as np
 from pycrazyswarm import Crazyswarm
@@ -56,7 +59,7 @@ def main():
     args = sys.argv[1:]
     Z = 0.6
     TAKEOFF_DURATION = 2.5
-    WAYPOINTS, GOTO_DURATION = create_trajectory_from_file(args[0], Z)
+    WAYPOINTS, fps = create_trajectory_from_file(args[0], Z)
 
     swarm = Crazyswarm()
     timeHelper = swarm.timeHelper
@@ -65,12 +68,33 @@ def main():
     cf.takeoff(targetHeight=Z, duration=TAKEOFF_DURATION)
     timeHelper.sleep(TAKEOFF_DURATION + 1.0)
 
-    for p in WAYPOINTS:
-        cf.goTo(cf.initialPosition + p, yaw=0.0, duration=GOTO_DURATION)
-        timeHelper.sleep(GOTO_DURATION + 1.0)
+    trajectory_log = []
+    for i, p in enumerate(WAYPOINTS):
+        # cf.goTo(p, yaw=0.0, duration=GOTO_DURATION)
+
+        cf.cmdPosition(p, yaw=0)
+
+        # Log the current position from Vicon
+        pos = cf.position()
+        trajectory_log.append(pos)
+
+        trajectory_log.append({
+            "frame_id": i,
+            "tvec": pos.tolist(),
+            "time": time.time() * 1000
+        })
+
+        timeHelper.sleepForRate(fps)
 
     cf.land(targetHeight=0.05, duration=TAKEOFF_DURATION)
     timeHelper.sleep(TAKEOFF_DURATION + 1.0)
+
+    now = datetime.now()
+    formatted = now.strftime("%H_%M_%S_%m_%d_%Y")
+    file_path = os.path.join("logs", f"vicon_{formatted}.json")
+    with open(file_path, "w") as f:
+        json.dump({"frames": trajectory_log}, f)
+    print(f"Vicon log saved in {file_path}")
 
 
 if __name__ == "__main__":
